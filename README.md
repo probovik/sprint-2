@@ -1,6 +1,4 @@
-# pymongo-api
-
-## Как запустить
+### Задание 2 (уважаемый проверяющий, у меня мак на М3 не стартует API контейнер, остальное проверил работает суть понял)
 
 Запускаем mongodb и приложение
 
@@ -8,28 +6,81 @@
 docker compose up -d
 ```
 
-Заполняем mongodb данными
+```инициализируйте сервер конфигурации выполнив поочередно команды
+docker exec -it configSrv mongosh --port 27017
 
-```shell
-./scripts/mongo-init.sh
+rs.initiate(
+  {
+    _id : "config_server",
+       configsvr: true,
+    members: [
+      { _id : 0, host : "configSrv:27017" }
+    ]
+  }
+);
+
+exit();
 ```
 
-## Как проверить
+```инициализируйте шарды выполнив поочередно команды
+docker exec -it shard1-1 mongosh --port 27018
 
-### Если вы запускаете проект на локальной машине
+rs.initiate(
+    {
+      _id : "shard1-1",
+      members: [
+        { _id : 0, host : "shard1-1:27018" },
+      ]
+    }
+);
 
-Откройте в браузере http://localhost:8080
+exit();
 
-### Если вы запускаете проект на предоставленной виртуальной машине
+docker exec -it shard1-2 mongosh --port 27019
 
-Узнать белый ip виртуальной машины
+rs.initiate(
+    {
+      _id : "shard1-2",
+      members: [
+        { _id : 1, host : "shard1-2:27019" }
+      ]
+    }
+  );
 
-```shell
-curl --silent http://ifconfig.me
+exit();
+```
+ 
+```инициализируйте роутер и наполните его данными выполнив поочередно команды должно получиться 1000 записей
+docker exec -it mongos_router mongosh --port 27020
+
+sh.addShard( "shard1-1/shard1-1:27018");
+sh.addShard( "shard1-2/shard1-2:27019");
+
+sh.enableSharding("somedb");
+sh.shardCollection("somedb.helloDoc", { "name" : "hashed" } )
+
+use somedb
+
+var docs = [];
+for(var i = 0; i < 1000; i++) {
+    docs.push({age:i, name:"ly"+i});
+}
+db.helloDoc.insertMany(docs);
+
+db.helloDoc.countDocuments() 
+exit();
 ```
 
-Откройте в браузере http://<ip виртуальной машины>:8080
+``` сделайте проверку на первом шарде получится 492 документа
+ docker exec -it shard1-1 mongosh --port 27018
+ use somedb;
+ db.helloDoc.countDocuments();
+ exit();
+``` 
 
-## Доступные эндпоинты
-
-Список доступных эндпоинтов, swagger http://<ip виртуальной машины>:8080/docs
+``` сделайте проверку на втором шарде получится 508 документов
+docker exec -it shard1-2 mongosh --port 27019
+use somedb;
+db.helloDoc.countDocuments();
+exit();
+```
