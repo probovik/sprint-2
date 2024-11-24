@@ -167,10 +167,14 @@ services:
     depends_on:
       - mongos_router
     ports:
-      - 8085:8085
+      - 8080:8080
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.19
     environment:
       MONGODB_URL: "mongodb://mongos_router:27020"
       MONGODB_DATABASE_NAME: "somedb"
+      REDIS_URL: "redis://173.17.0.2:6379"
 
   redis_1:
     image: "redis:latest"

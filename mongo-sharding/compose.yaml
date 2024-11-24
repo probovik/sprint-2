@@ -23,7 +23,7 @@ services:
       interval: 5s
       start_period: 10s
 
-  #1-й шард 
+  #1-й шард с репликами
   shard1-1:
     image: mongo:latest # docker образ
     container_name: shard1-1
@@ -46,6 +46,36 @@ services:
       test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       start_period: 10s
+
+  shard1-1secondary1:
+    image: mongo:latest # docker образ
+    container_name: shard1-1replica1
+    command: --shardsvr --replSet shard1-1 --port 27028
+    ports:
+      - 27028:27028
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.11
+
+  shard1-1secondary2:
+    image: mongo:latest # docker образ
+    container_name: shard1-1replica2
+    command: --shardsvr --replSet shard1-1 --port 27038
+    ports:
+      - 27038:27038
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.12
+
+  shard1-1secondary3:
+    image: mongo:latest # docker образ
+    container_name: shard1-1replica3
+    command: --shardsvr --replSet shard1-1 --port 27048
+    ports:
+      - 27048:27048
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.13
 
   #2-й шард 
   shard1-2:
@@ -71,6 +101,36 @@ services:
       interval: 5s
       start_period: 10s
   
+  shard1-2secondary1:
+    image: mongo:latest # docker образ
+    container_name: shard1-2secondary1
+    command: --shardsvr --replSet shard1-2replica --port 27029
+    ports:
+      - 27029:27029
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.14
+
+  shard1-2secondary2:
+    image: mongo:latest # docker образ
+    container_name: shard1-2secondary2
+    command: --shardsvr --replSet shard1-2replica --port 27039
+    ports:
+      - 27039:27039
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.15
+  
+  shard1-2secondary3:
+    image: mongo:latest # docker образ
+    container_name: shard1-2secondary3
+    command: --shardsvr --replSet shard1-2replica --port 27049
+    ports:
+      - 27049:27049
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.16
+
   #роутер
   mongos_router:
     image: mongo:latest # docker образ
@@ -107,10 +167,92 @@ services:
     depends_on:
       - mongos_router
     ports:
-      - 8085:8085
+      - 8080:8080
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.19
     environment:
       MONGODB_URL: "mongodb://mongos_router:27020"
       MONGODB_DATABASE_NAME: "somedb"
+      REDIS_URL: "redis://173.17.0.2:6379"
+
+  redis_1:
+    image: "redis:latest"
+    container_name: redis_1
+    ports:
+      - "6379"
+    volumes:
+      - redis_1_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.2
+
+  redis_2:
+    image: "redis:latest"
+    container_name: redis_2
+    ports:
+      - "6379"
+    volumes:
+      - redis_2_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.3
+
+  redis_3:
+    image: "redis:latest"
+    container_name: redis_3
+    ports:
+      - "6379"
+    volumes:
+      - redis_3_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.4
+
+  redis_4:
+    image: "redis:latest"
+    container_name: redis_4
+    ports:
+      - "6379"
+    volumes:
+      - redis_4_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.5
+
+  redis_5:
+    image: "redis:latest"
+    container_name: redis_5
+    ports:
+      - "6379"
+    volumes:
+      - redis_5_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.6
+
+  redis_6:
+    image: "redis:latest"
+    container_name: redis_6
+    ports:
+      - "6379"
+    volumes:
+      - redis_6_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.17
 
 networks:
   app-network:
@@ -118,7 +260,13 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 173.17.0.0/16
+        - subnet: 173.17.0.0/24
 
 volumes:
   mongodb1_data_container:
+  redis_1_data: {}
+  redis_2_data: {}
+  redis_3_data: {}
+  redis_4_data: {}
+  redis_5_data: {}
+  redis_6_data: {}
