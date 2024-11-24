@@ -161,13 +161,15 @@ services:
     build: 
       context: api_app
       dockerfile: Dockerfile
+      platforms: 
+      - "linux/amd64"
     image: kazhem/pymongo_api:1.0.0
     depends_on:
       - mongos_router
     ports:
       - 8085:8085
     environment:
-      MONGODB_URL: "mongos_router://mongodb"
+      MONGODB_URL: "mongodb://mongos_router:27020"
       MONGODB_DATABASE_NAME: "somedb"
 
   redis_1:
@@ -246,7 +248,7 @@ services:
     command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     networks:
       app-network:
-        ipv4_address: 173.17.0.7
+        ipv4_address: 173.17.0.17
 
 networks:
   app-network:

@@ -61,7 +61,7 @@ services:
       [
         "--shardsvr", #запуск в режиме шардинга
         "--replSet",
-        "shard1-2", #название реплик
+        "shard1-2replica", #название реплик
         "--bind_ip_all", # обратите внимание - она отличается от реплики 1-го шарда
         "--port",
         "27019"
@@ -101,13 +101,15 @@ services:
     build: 
       context: api_app
       dockerfile: Dockerfile
+      platforms: 
+      - "linux/amd64"
     image: kazhem/pymongo_api:1.0.0
     depends_on:
       - mongos_router
     ports:
       - 8085:8085
     environment:
-      MONGODB_URL: "mongos_router://mongodb"
+      MONGODB_URL: "mongodb://mongos_router:27020"
       MONGODB_DATABASE_NAME: "somedb"
 
 networks:
