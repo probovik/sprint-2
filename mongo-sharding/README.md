@@ -29,7 +29,7 @@ rs.initiate(
     {
       _id : "shard1-1",
       members: [
-        { _id : 0, host : "shard1-1:27018" },
+        { _id : 0, host : "shard1-1:27018" }
       ]
     }
 );
@@ -42,10 +42,10 @@ rs.initiate(
     {
       _id : "shard1-2replica",
       members: [
-        { _id : 1, host : "shard1-2:27019" }
+        { _id : 0, host : "shard1-2:27019" }
       ]
     }
-  );
+);
 
 exit();
 ```
@@ -54,7 +54,7 @@ exit();
 docker exec -it mongos_router mongosh --port 27020
 
 sh.addShard( "shard1-1/shard1-1:27018");
-sh.addShard( "shard1-2/shard1-2:27019");
+sh.addShard( "shard1-2replica/shard1-2:27019");
 
 sh.enableSharding("somedb");
 sh.shardCollection("somedb.helloDoc", { "name" : "hashed" } )

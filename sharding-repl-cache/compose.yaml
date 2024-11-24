@@ -174,7 +174,7 @@ services:
     environment:
       MONGODB_URL: "mongodb://mongos_router:27020"
       MONGODB_DATABASE_NAME: "somedb"
-      REDIS_URL: "redis://173.17.0.2:6379"
+      REDIS_URL: "redis://173.17.0.2:6379,redis://173.17.0.3:6379,redis://173.17.0.4:6379,redis://173.17.0.5:6379,redis://173.17.0.6:6379,redis://173.17.0.17:6379"
 
   redis_1:
     image: "redis:latest"
