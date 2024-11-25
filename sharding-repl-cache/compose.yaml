@@ -1,0 +1,233 @@
+services:
+  #сервер конфигурации
+  configSrv:
+    image: mongo:latest # docker образ
+    container_name: configSrv 
+    restart: always
+    ports:
+      - "27017:27017"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.10
+    volumes:
+      - config-data:/data/db
+    command:
+      [
+        "--configsvr",  #запуск в режиме конфигурации
+        "--replSet",
+        "config_server",
+        "--bind_ip_all",
+        "--port",
+        "27017"
+      ] 
+    healthcheck:
+      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+      
+  #роутер
+  mongos_router:
+    image: mongo:latest # docker образ
+    container_name: mongos_router
+    restart: always
+    ports:
+      - "27020:27020"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.7
+    volumes:
+      - mongos_router:/data/db    
+    command:
+      [
+        "mongos", #обычная mongo в режиме роутера
+        "--configdb", 
+        "config_server/configSrv:27017", #передача данных сервера конфигурации
+        "--bind_ip_all",
+        "--port",
+        "27020"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  #1-й шард с репликами
+  shard1-1:
+    image: mongo:latest # docker образ
+    container_name: shard1-1
+    restart: always
+    ports:
+      - "27018:27018"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.9
+    volumes:
+      - shard1-1:/data/db    
+    command:
+      [
+        "--shardsvr", #запуск в режиме шардинга
+        "--replSet",
+        "shard1-1", #название реплики
+        "--bind_ip_all",
+        "--port",
+        "27018"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  shard1-1secondary1:
+    image: mongo:latest # docker образ
+    container_name: shard1-1replica1
+    command: --shardsvr --replSet shard1-1 --port 27028
+    ports:
+      - 27028:27028
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.11
+    volumes:
+      - shard1-1secondary1:/data/db
+
+  shard1-1secondary2:
+    image: mongo:latest # docker образ
+    container_name: shard1-1replica2
+    command: --shardsvr --replSet shard1-1 --port 27038
+    ports:
+      - 27038:27038
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.12
+    volumes:
+      - shard1-1secondary2:/data/db
+
+  shard1-1secondary3:
+    image: mongo:latest # docker образ
+    container_name: shard1-1replica3
+    command: --shardsvr --replSet shard1-1 --port 27048
+    ports:
+      - 27048:27048
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.13
+    volumes:
+      - shard1-1secondary3:/data/db
+
+  #2-й шард 
+  shard1-2:
+    image: mongo:latest # docker образ
+    container_name: shard1-2
+    restart: always
+    ports:
+      - "27019:27019"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.8
+    volumes:
+      - shard1-2:/data/db
+    command:
+      [
+        "--shardsvr", #запуск в режиме шардинга
+        "--replSet",
+        "shard1-2replica", #название реплик
+        "--bind_ip_all", # обратите внимание - она отличается от реплики 1-го шарда
+        "--port",
+        "27019"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongo", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+  
+  shard1-2secondary1:
+    image: mongo:latest # docker образ
+    container_name: shard1-2secondary1
+    command: --shardsvr --replSet shard1-2replica --port 27029
+    ports:
+      - 27029:27029
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.14
+    volumes:
+      - shard1-2secondary1:/data/db
+
+  shard1-2secondary2:
+    image: mongo:latest # docker образ
+    container_name: shard1-2secondary2
+    command: --shardsvr --replSet shard1-2replica --port 27039
+    ports:
+      - 27039:27039
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.15
+    volumes:
+      - shard1-2secondary2:/data/db
+  
+  shard1-2secondary3:
+    image: mongo:latest # docker образ
+    container_name: shard1-2secondary3
+    command: --shardsvr --replSet shard1-2replica --port 27049
+    ports:
+      - 27049:27049
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.16
+    volumes:
+      - shard1-2secondary3:/data/db
+
+  #Redis
+  redis_1:
+    image: "redis:latest"
+    container_name: redis_1
+    ports:
+      - "6379"
+    volumes:
+      - redis_1_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.2
+
+  #API
+  pymongo_api:
+    container_name: pymongo_api
+    build: 
+      context: api_app
+      dockerfile: Dockerfile
+    image: kazhem/pymongo_api:1.0.0
+    depends_on:
+      - mongos_router
+      - shard1-1
+      - shard1-2
+      - configSrv
+    ports:
+      - 8080:8080
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.19
+    environment:
+      MONGODB_URL: "mongodb://mongos_router:27020"
+      MONGODB_DATABASE_NAME: "somedb"
+      REDIS_URL: "redis://173.17.0.2:6379"
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 173.17.0.0/24
+
+volumes:
+  config-data:
+  mongos_router:
+  shard1-1:
+  shard1-1secondary1:
+  shard1-1secondary2:
+  shard1-1secondary3:
+  shard1-2:
+  shard1-2secondary1:
+  shard1-2secondary2:
+  shard1-2secondary3:
+  redis_1_data: {}
